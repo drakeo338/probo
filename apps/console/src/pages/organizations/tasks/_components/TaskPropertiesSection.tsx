@@ -20,7 +20,7 @@
 
 import { formatDatetime, toDateInput } from "@probo/helpers";
 import { dateFormat, dateTimeFormat, formatDuration } from "@probo/i18n";
-import { PriorityLevel, TaskStateIcon } from "@probo/ui";
+import { PriorityLevel } from "@probo/ui";
 import { Card } from "@probo/ui/src/v2/Card/Card";
 import { TextField } from "@probo/ui/src/v2/form/TextField";
 import { Link } from "@probo/ui/src/v2/Link/Link";
@@ -52,6 +52,7 @@ import { TaskAssigneeField } from "./TaskAssigneeField";
 import { TaskDurationField } from "./TaskDurationField";
 import { TaskLinearField } from "./TaskLinearField";
 import { TaskMeasureField } from "./TaskMeasureField";
+import { TaskStateIcon } from "./TaskStateIcon";
 
 const taskPropertiesSectionFragment = graphql`
   fragment TaskPropertiesSection_task on Task {

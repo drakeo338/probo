@@ -40,7 +40,7 @@ const createTaskMutation = graphql`
       taskEdge {
         node {
           ...TasksCard_task
-          ...TasksCard_TaskRowFragment
+          ...TaskListItem_task
         }
       }
     }

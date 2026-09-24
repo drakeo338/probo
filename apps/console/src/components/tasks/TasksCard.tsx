@@ -18,40 +18,27 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-import { formatError, promisifyMutation } from "@probo/helpers";
-import { dateFormat, formatDuration } from "@probo/i18n";
-import {
-  Button,
-  Card,
-  IconCircleCheck,
-  IconCircleProgress,
-  IconRadioUnchecked,
-  IconRotateCw,
-  IconTrashCan,
-  PriorityLevel,
-  TabBadge,
-  TabItem,
-  Tabs,
-  TaskStateIcon,
-  useConfirm,
-  useToast,
-} from "@probo/ui";
+import { formatError } from "@probo/helpers";
+import { useToast } from "@probo/ui";
+import { Badge } from "@probo/ui/src/v2/Badge/Badge";
+import { Card } from "@probo/ui/src/v2/Card/Card";
+import { Tabs } from "@probo/ui/src/v2/Tabs/Tabs";
+import { TabsIndicator } from "@probo/ui/src/v2/Tabs/TabsIndicator";
+import { TabsList } from "@probo/ui/src/v2/Tabs/TabsList";
+import { TabsTab } from "@probo/ui/src/v2/Tabs/TabsTab";
+import { Text } from "@probo/ui/src/v2/typography/Text";
 import { Fragment, type ReactNode, useRef, useState, useTransition } from "react";
 import { useTranslation } from "react-i18next";
 import {
   graphql,
   readInlineData,
-  useFragment,
   useMutation,
   useRefetchableFragment,
   useRelayEnvironment,
 } from "react-relay";
-import { Link, useLocation, useParams } from "react-router";
+import { useLocation } from "react-router";
 
 import type { TasksCard_task$key } from "#/__generated__/core/TasksCard_task.graphql";
-import type { TasksCard_TaskRowFragment$key } from "#/__generated__/core/TasksCard_TaskRowFragment.graphql";
-import type { TasksCardAdvanceMutation } from "#/__generated__/core/TasksCardAdvanceMutation.graphql";
-import type { TasksCardDeleteMutation } from "#/__generated__/core/TasksCardDeleteMutation.graphql";
 import type {
   TasksCardOrganizationFragment$data,
   TasksCardOrganizationFragment$key,
@@ -60,13 +47,15 @@ import type { TasksCardOrganizationQuery } from "#/__generated__/core/TasksCardO
 import type { TasksCardUpdateRankMutation } from "#/__generated__/core/TasksCardUpdateRankMutation.graphql";
 import { updateStoreCounter } from "#/hooks/useMutationWithIncrement";
 import { useOrganizationId } from "#/hooks/useOrganizationId";
+import { TaskStateIcon } from "#/pages/organizations/tasks/_components/TaskStateIcon";
 import { insertNextTaskEdge } from "#/pages/organizations/tasks/_lib/taskConnectionOrder";
-import { taskDetailsPath } from "#/pages/organizations/tasks/_lib/taskPath";
 import {
   taskPriorities,
   type TaskPriority,
   type TaskState,
 } from "#/pages/organizations/tasks/_lib/taskState";
+
+import { TaskListItem } from "./TaskListItem";
 
 function resolveDropPriority(
   dragged: TaskPriority,
@@ -135,7 +124,7 @@ const organizationTasksFragment = graphql`
       edges @required(action: THROW) {
         node {
           ...TasksCard_task
-          ...TasksCard_TaskRowFragment
+          ...TaskListItem_task
         }
       }
     }
@@ -180,12 +169,12 @@ const updateRankMutation = graphql`
         state
         recurrenceInterval
         ...TasksCard_task
-        ...TasksCard_TaskRowFragment
+        ...TaskListItem_task
       }
       nextTaskEdge {
         node {
           ...TasksCard_task
-          ...TasksCard_TaskRowFragment
+          ...TaskListItem_task
           measure {
             id
           }
@@ -415,9 +404,9 @@ export function TasksCard({ tasks, connectionId, canReorder, refetch }: Props) {
   const renderTaskRow = (node: (typeof tasks)[number]["node"], sectionState?: TaskState) => {
     const task = readTask(node);
     return (
-      <TaskRow
+      <TaskListItem
         key={task.id}
-        fKey={node}
+        taskKey={node}
         connectionId={connectionId}
         sectionState={sectionState}
         canDrag={canDrag}
@@ -444,37 +433,45 @@ export function TasksCard({ tasks, connectionId, canReorder, refetch }: Props) {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
       {tasks.length === 0
         ? (
-            <p className="text-center py-6 text-txt-secondary">{t("tasksCard.empty")}</p>
+            <Text size={2} color="faint" align="center" className="py-6">
+              {t("tasksCard.empty")}
+            </Text>
           )
         : (
-            <Card>
-              <Tabs className="px-6">
-                {hashes.map(h => (
-                  <TabItem asChild active={hash === h.hash} key={h.hash}>
-                    <Link to={`#${h.hash}`}>
+            <Card padding="none">
+              <Tabs
+                value={hash}
+                onValueChange={(value: string) => {
+                  window.location.hash = value;
+                }}
+              >
+                <TabsList className="px-4">
+                  {hashes.map(h => (
+                    <TabsTab key={h.hash} value={h.hash}>
                       {h.state && <TaskStateIcon state={h.state} />}
                       {h.label}
-                      <TabBadge>{tasksPerHash.get(h.hash)?.length}</TabBadge>
-                    </Link>
-                  </TabItem>
-                ))}
+                      <Badge>{tasksPerHash.get(h.hash)?.length}</Badge>
+                    </TabsTab>
+                  ))}
+                  <TabsIndicator />
+                </TabsList>
               </Tabs>
-              <div className="divide-y divide-border-solid">
+              <div className="divide-y divide-sand-6">
                 {hash === ""
                   ? stateHashes
                       .filter(h => tasksPerHash.get(h.hash)?.length || (draggedId && dropTargetState === h.state))
                       .map((h) => {
                         const displayEdges = applyPreviewOrder(tasksPerHash.get(h.hash) ?? []);
                         const dragClass = canDrag && draggedId !== null
-                          ? "border-2 border-dashed border-transparent hover:border-primary-300"
+                          ? "border-2 border-dashed border-transparent hover:border-sand-8"
                           : "";
                         return (
                           <Fragment key={h.label}>
                             <h2
-                              className={`px-6 py-3 text-sm font-medium flex items-center gap-2 bg-subtle ${dragClass}`}
+                              className={`flex items-center gap-2 bg-sand-2 px-6 py-3 text-2 font-medium text-sand-12 ${dragClass}`}
                               onDragOver={canDrag
                                 ? (e) => {
                                     e.preventDefault();
@@ -495,248 +492,12 @@ export function TasksCard({ tasks, connectionId, canReorder, refetch }: Props) {
             </Card>
           )}
       {canDrag && filteredTasks.length > 1 && (
-        <p className="text-sm text-txt-tertiary">
+        <Text size={2} color="faint">
           {hash === ""
             ? t("tasksCard.dragInstructions.all")
             : t("tasksCard.dragInstructions.state")}
-        </p>
+        </Text>
       )}
-    </div>
-  );
-}
-
-type TaskRowProps = {
-  fKey: TasksCard_TaskRowFragment$key;
-  connectionId: string;
-  sectionState?: TaskState;
-  canDrag?: boolean;
-  isDragging?: boolean;
-  isGhost?: boolean;
-  ignoreClick: boolean;
-  onDragStart?: () => void;
-  onDragOver?: (e: React.DragEvent) => void;
-  onDrop?: () => void;
-  onDragEnd?: () => void;
-  onStateChange?: () => void;
-};
-
-const fragment = graphql`
-  fragment TasksCard_TaskRowFragment on Task {
-    id
-    name
-    state
-    priority
-    timeEstimate
-    deadline
-    recurrenceInterval
-    canUpdate: permission(action: "core:task:update")
-    canDelete: permission(action: "core:task:delete")
-    assignedTo {
-      id
-      fullName
-    }
-  }
-`;
-
-const advanceMutation = graphql`
-  mutation TasksCardAdvanceMutation($input: UpdateTaskInput!) {
-    updateTask(input: $input) {
-      task {
-        ...TasksCard_task
-        ...TasksCard_TaskRowFragment
-        ...TaskDetailsPage_task
-      }
-      nextTaskEdge {
-        node {
-          ...TasksCard_task
-          ...TasksCard_TaskRowFragment
-          measure {
-            id
-          }
-        }
-      }
-    }
-  }
-`;
-
-const deleteMutation = graphql`
-  mutation TasksCardDeleteMutation(
-    $input: DeleteTaskInput!
-    $connections: [ID!]!
-  ) {
-    deleteTask(input: $input) {
-      deletedTaskId @deleteEdge(connections: $connections)
-    }
-  }
-`;
-
-function TaskRow(props: TaskRowProps) {
-  const organizationId = useOrganizationId();
-  const { t, i18n } = useTranslation();
-  const confirm = useConfirm();
-  const [deleteTask] = useMutation<TasksCardDeleteMutation>(deleteMutation);
-  const params = useParams<{ measureId?: string }>();
-
-  const relayEnv = useRelayEnvironment();
-  const { canUpdate, canDelete, ...task }
-    = useFragment<TasksCard_TaskRowFragment$key>(
-      fragment,
-      props.fKey,
-    );
-  const [updateTask, isAdvancing] = useMutation<TasksCardAdvanceMutation>(advanceMutation);
-  const [isMouseDown, setIsMouseDown] = useState(false);
-  const displayState = props.sectionState ?? task.state;
-
-  const nextStepConfig: Record<string, {
-    state: TaskState;
-    label: string;
-    icon: typeof IconCircleProgress;
-    className: string;
-  }> = {
-    BACKLOG: { state: "TODO", label: t("tasksCard.actions.moveToTodo"), icon: IconRadioUnchecked, className: "text-txt-quaternary" },
-    TODO: { state: "IN_PROGRESS", label: t("tasksCard.actions.moveToInProgress"), icon: IconCircleProgress, className: "text-txt-warning" },
-    IN_PROGRESS: { state: "DONE", label: t("tasksCard.actions.moveToDone"), icon: IconCircleCheck, className: "text-txt-accent" },
-  };
-
-  const onAdvance = async () => {
-    const config = nextStepConfig[displayState];
-    if (!config) return;
-    const target = config.state;
-    await promisifyMutation(updateTask)({
-      variables: {
-        input: {
-          taskId: task.id,
-          state: target,
-        },
-      },
-      updater: (store) => {
-        const spawnedMeasureId = insertNextTaskEdge(store, organizationId, [props.connectionId]);
-        if (spawnedMeasureId) {
-          updateStoreCounter(relayEnv, spawnedMeasureId, "tasks(first:0)", 1);
-        }
-      },
-    });
-    props.onStateChange?.();
-  };
-
-  const onDelete = () => {
-    confirm(
-      () =>
-        promisifyMutation(deleteTask)({
-          variables: {
-            input: { taskId: task.id },
-            connections: [props.connectionId],
-          },
-          onCompleted: (_response, errors) => {
-            if (!errors && params.measureId) {
-              updateStoreCounter(
-                relayEnv,
-                params.measureId,
-                "tasks(first:0)",
-                -1,
-              );
-            }
-          },
-        }),
-      {
-        message: t("tasksCard.deleteConfirmation"),
-      },
-    );
-  };
-
-  const { canDrag, isDragging, isGhost } = props;
-
-  const className = [
-    "hover:bg-subtle",
-    canDrag && "select-none",
-    canDrag && isDragging && !isGhost && "opacity-40 cursor-grabbing",
-    canDrag && !isDragging && !isMouseDown && "cursor-grab",
-    canDrag && !isDragging && isMouseDown && "cursor-grabbing",
-    isGhost && "opacity-50 bg-primary-50",
-  ]
-    .filter(Boolean)
-    .join(" ");
-
-  const detailsUrl = taskDetailsPath(organizationId, task.id);
-
-  return (
-    <div
-      className={`relative flex items-center gap-3 py-3 px-6 ${className}`}
-      draggable={canDrag}
-      onDragStart={canDrag ? props.onDragStart : undefined}
-      onDragOver={canDrag ? props.onDragOver : undefined}
-      onDrop={canDrag ? props.onDrop : undefined}
-      onDragEnd={canDrag ? props.onDragEnd : undefined}
-      onMouseDown={canDrag ? () => setIsMouseDown(true) : undefined}
-      onMouseUp={canDrag ? () => setIsMouseDown(false) : undefined}
-      onMouseLeave={canDrag ? () => setIsMouseDown(false) : undefined}
-    >
-      <div className="flex flex-1 min-w-0 items-center gap-3">
-        <PriorityLevel level={task.priority} />
-        <TaskStateIcon state={displayState} />
-        {task.recurrenceInterval && (
-          <span
-            title={t("tasksCard.recurringBadge.tooltip", {
-              interval: formatDuration(task.recurrenceInterval, t),
-            })}
-          >
-            <IconRotateCw size={14} className="text-txt-secondary" />
-          </span>
-        )}
-        <h2 className="text-sm font-medium min-w-0 truncate">
-          <Link
-            to={detailsUrl}
-            className="hover:underline after:absolute after:inset-0 after:content-['']"
-            draggable={false}
-            onClick={(event) => {
-              if (props.ignoreClick) {
-                event.preventDefault();
-              }
-            }}
-          >
-            {task.name}
-          </Link>
-        </h2>
-        {task.timeEstimate && (
-          <span className="text-xs text-txt-secondary shrink-0">
-            {formatDuration(task.timeEstimate, t)}
-          </span>
-        )}
-        {task.deadline && (
-          <time className="text-xs text-txt-secondary shrink-0" dateTime={task.deadline}>
-            {dateFormat(i18n.language, task.deadline)}
-          </time>
-        )}
-        {task.assignedTo?.fullName && (
-          <Link
-            className="relative z-10 text-sm text-txt-secondary hover:underline ml-auto shrink-0"
-            to={`/organizations/${organizationId}/settings/people/${task.assignedTo.id}`}
-          >
-            {task.assignedTo.fullName}
-          </Link>
-        )}
-      </div>
-      <div className="relative z-10 flex shrink-0 gap-2 items-center">
-        {canUpdate && nextStepConfig[displayState] && (
-          <Button
-            variant="secondary"
-            icon={nextStepConfig[displayState].icon}
-            className={nextStepConfig[displayState].className}
-            title={nextStepConfig[displayState].label}
-            onClick={() => void onAdvance()}
-            disabled={isAdvancing}
-          />
-        )}
-        {canDelete && (
-          <Button
-            variant="secondary"
-            icon={IconTrashCan}
-            className="text-txt-danger"
-            title={t("tasksCard.actions.delete")}
-            onClick={onDelete}
-          />
-        )}
-      </div>
     </div>
   );
 }

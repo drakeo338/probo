@@ -41,7 +41,7 @@ const tasksQuery = graphql`
           edges @required(action: THROW) {
             node {
               ...TasksCard_task
-              ...TasksCard_TaskRowFragment
+              ...TaskListItem_task
             }
           }
         }

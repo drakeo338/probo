@@ -1147,6 +1147,10 @@
       "edit": "Bewerken",
       "delete": "Verwijderen"
     },
+    "metadata": {
+      "timeEstimate": "Tijdsinschatting",
+      "deadline": "Deadline"
+    },
     "recurringBadge": {
       "tooltip": "Herhaalt elke {{interval}}"
     }
